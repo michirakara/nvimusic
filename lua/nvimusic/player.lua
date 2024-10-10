@@ -55,17 +55,19 @@ local function play_music(path, volume_percent)
     handle, pid = uv.spawn("paplay", {
             args = { "--volume=" .. tostring(volume), path },
         },
-        function(code)
-            playing_index = playing_index + 1
-            if playing_index > #playlist then
-                playing_index = 0
+        vim.shcedule_wrap(
+            function(code)
+                playing_index = playing_index + 1
+                if playing_index > #playlist then
+                    playing_index = 0
+                end
+                if code ~= 0 then
+                    print(code)
+                end
+                M.open()
+                play_music(playlist[playing_index], 100)
             end
-            if code ~= 0 then
-                print(code)
-            end
-            M.open()
-            play_music(playlist[playing_index], 100)
-        end
+        )
     )
     if handle == nil then
         print("paplay is not installed")
@@ -111,12 +113,12 @@ end
 
 function M.open()
     if buf ~= nil and api.nvim_buf_is_valid(buf) then
-        api.nvim_buf_delete(buf,{})
+        api.nvim_buf_delete(buf, {})
     end
     buf = api.nvim_create_buf(false, true)
     vim.keymap.set('n', 'q',
         function()
-            api.nvim_buf_delete(buf,{})
+            api.nvim_buf_delete(buf, {})
         end,
         { buffer = buf })
     api.nvim_open_win(buf, true, get_float_config())
