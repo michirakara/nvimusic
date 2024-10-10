@@ -5,8 +5,10 @@
 - UNIX/Linux
 
 # Available commands
+- Nvimusic
+    - Show tui of playlist
 - NvimusicAdd
-    - Adds folder(does not search recursively) or file to end of the playlist
+    - Add a folder(does not search recursively) or file to the end of the playlist
 - NvimusicShuffle
     - Shuffle the playlist
 - NvimusicPlay
