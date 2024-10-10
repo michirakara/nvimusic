@@ -63,6 +63,7 @@ local function play_music(path, volume_percent)
             if code ~= 0 then
                 print(code)
             end
+            M.open()
             play_music(playlist[playing_index], 100)
         end
     )
