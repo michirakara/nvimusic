@@ -1,8 +1,10 @@
 local M = {}
 
 local uv = vim.uv
+local api = vim.api
 
 local playlist = {}
+local buf = 114514
 
 local function dump_playlist()
     for key, value in pairs(playlist) do
@@ -28,12 +30,18 @@ function M.add_to_playlist(path)
     else
         table.insert(playlist, path)
     end
+    if api.nvim_buf_is_loaded(buf) then
+        M.open()
+    end
 end
 
 function M.shuffle_playlist()
     for i = #playlist, 2, -1 do
         local j = math.random(i)
         playlist[i], playlist[j] = playlist[j], playlist[i]
+    end
+    if api.nvim_buf_is_loaded(buf) then
+        M.open()
     end
 end
 
@@ -79,6 +87,48 @@ end
 
 function M.skip()
     io.popen("kill " .. pid)
+end
+
+local function get_float_config()
+    local width = math.ceil(math.min(vim.o.columns, math.max(80, vim.o.columns - 20)))
+    local height = math.ceil(math.min(vim.o.lines, math.max(20, vim.o.lines - 10)))
+
+    local row = math.ceil(vim.o.lines - height) * 0.5 - 1
+    local col = math.ceil(vim.o.columns - width) * 0.5 - 1
+
+    local float_config = {
+        row = row,
+        col = col,
+        relative = "editor",
+        style = "minimal",
+        width = width,
+        height = height,
+        border = "single"
+    }
+    return float_config
+end
+
+function M.open()
+    if api.nvim_buf_is_loaded(buf) then
+        api.nvim_buf_delete(buf,{})
+    end
+    buf = api.nvim_create_buf(false, true)
+    vim.keymap.set('n', 'q',
+        function()
+            api.nvim_buf_delete(buf,{})
+        end,
+        { buffer = buf })
+    api.nvim_open_win(buf, true, get_float_config())
+    local lines = {}
+    for key, value in pairs(playlist) do
+        if key == playing_index then
+            table.insert(lines, " " .. key .. "\t" .. value)
+        else
+            table.insert(lines, "  " .. key .. "\t" .. value)
+        end
+    end
+    api.nvim_buf_clear_namespace(buf, -1, 0, #playlist)
+    api.nvim_buf_set_lines(buf, 0, #playlist, false, lines)
 end
 
 vim.api.nvim_create_autocmd("VimLeave", {
@@ -127,5 +177,11 @@ vim.api.nvim_create_user_command(
     end,
     { nargs = 0 }
 )
-
-return M
+vim.api.nvim_create_user_command(
+    "Nvimusic",
+    function()
+        M.open()
+    end,
+    { nargs = 0 }
+)
+return
