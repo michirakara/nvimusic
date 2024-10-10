@@ -55,7 +55,7 @@ local function play_music(path, volume_percent)
     handle, pid = uv.spawn("paplay", {
             args = { "--volume=" .. tostring(volume), path },
         },
-        vim.shcedule_wrap(
+        vim.schedule_wrap(
             function(code)
                 playing_index = playing_index + 1
                 if playing_index > #playlist then
