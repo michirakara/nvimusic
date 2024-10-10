@@ -30,7 +30,7 @@ function M.add_to_playlist(path)
     else
         table.insert(playlist, path)
     end
-    if buf ~= nil and api.nvim_buf_valid(buf) then
+    if buf ~= nil and api.nvim_buf_is_valid(buf) then
         M.open()
     end
 end
@@ -40,7 +40,7 @@ function M.shuffle_playlist()
         local j = math.random(i)
         playlist[i], playlist[j] = playlist[j], playlist[i]
     end
-    if buf ~= nil and api.nvim_buf_valid(buf) then
+    if buf ~= nil and api.nvim_buf_is_valid(buf) then
         M.open()
     end
 end
@@ -110,7 +110,7 @@ local function get_float_config()
 end
 
 function M.open()
-    if buf ~= nil and api.nvim_buf_valid(buf) then
+    if buf ~= nil and api.nvim_buf_is_valid(buf) then
         api.nvim_buf_delete(buf,{})
     end
     buf = api.nvim_create_buf(false, true)
