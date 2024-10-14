@@ -145,15 +145,15 @@ function M.open()
     api.nvim_buf_set_lines(buf, 0, #playlist, false, lines)
 end
 
-vim.api.nvim_create_autocmd("VimLeavePre", {
-    pattern = "*",
-    callback = function()
-        if pid ~= nil then
-            is_quitting = 1
-            io.popen("kill " .. pid)
-        end
-    end
-})
+-- vim.api.nvim_create_autocmd("VimLeavePre", {
+--     pattern = "*",
+--     callback = function()
+--         if pid ~= nil then
+--             is_quitting = 1
+--             io.popen("kill " .. pid)
+--         end
+--     end
+-- })
 
 
 vim.api.nvim_create_user_command(
