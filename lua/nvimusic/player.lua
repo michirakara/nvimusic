@@ -5,6 +5,7 @@ local api = vim.api
 
 local playlist = {}
 local buf = 114514
+local is_quitting = 0
 
 local function dump_playlist()
     for key, value in pairs(playlist) do
@@ -35,7 +36,7 @@ function M.add_to_playlist(path)
     end
 end
 
-function delete_from_playlist(name)
+function M.delete_from_playlist(name)
     for key, value in pairs(table) do
         if value == name then
             table.remove(playlist, key)
@@ -73,7 +74,9 @@ local function play_music(path, volume_percent)
                     print(code)
                 end
                 M.open()
-                play_music(playlist[playing_index], 100)
+                if is_quitting ~= 0 then
+                    play_music(playlist[playing_index], 100)
+                end
             end
         )
     )
@@ -142,10 +145,11 @@ function M.open()
     api.nvim_buf_set_lines(buf, 0, #playlist, false, lines)
 end
 
-vim.api.nvim_create_autocmd("VimLeave", {
+vim.api.nvim_create_autocmd("VimLeavePre", {
     pattern = "*",
     callback = function()
         if pid ~= nil then
+            is_quitting = 1
             io.popen("kill " .. pid)
         end
     end
