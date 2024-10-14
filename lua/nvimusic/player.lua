@@ -35,6 +35,14 @@ function M.add_to_playlist(path)
     end
 end
 
+function delete_from_playlist(name)
+    for key, value in pairs(table) do
+        if value == name then
+            table.remove(playlist, key)
+        end
+    end
+end
+
 function M.shuffle_playlist()
     for i = #playlist, 2, -1 do
         local j = math.random(i)
@@ -137,7 +145,9 @@ end
 vim.api.nvim_create_autocmd("VimLeave", {
     pattern = "*",
     callback = function()
-        io.popen("kill " .. pid)
+        if pid ~= nil then
+            io.popen("kill " .. pid)
+        end
     end
 })
 
@@ -150,6 +160,18 @@ vim.api.nvim_create_user_command(
     {
         nargs = 1,
         complete = "file",
+    }
+)
+vim.api.nvim_create_user_command(
+    "NvimusicDelete",
+    function(opts)
+        M.delete_from_playlist(opts.args)
+    end,
+    {
+        nargs = 1,
+        complete = function(ArgLead, CmdLine, CursorPos)
+            return playlist
+        end
     }
 )
 vim.api.nvim_create_user_command(
