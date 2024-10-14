@@ -5,7 +5,7 @@ local api = vim.api
 
 local playlist = {}
 local buf = 114514
-local is_quitting = 0
+local is_playing = false
 
 local function dump_playlist()
     for key, value in pairs(playlist) do
@@ -32,7 +32,8 @@ function M.add_to_playlist(path)
         table.insert(playlist, path)
     end
     if buf ~= nil and api.nvim_buf_is_valid(buf) then
-        M.open()
+        local r, c = unpack(api.nvim_win_get_cursor(0))
+        M.open(r, c)
     end
 end
 
@@ -44,13 +45,22 @@ function M.delete_from_playlist(name)
     end
 end
 
+function M.delete_all()
+    playlist = {}
+    if buf ~= nil and api.nvim_buf_is_valid(buf) then
+        local r, c = unpack(api.nvim_win_get_cursor(0))
+        M.open(r, c)
+    end
+end
+
 function M.shuffle_playlist()
     for i = #playlist, 2, -1 do
         local j = math.random(i)
         playlist[i], playlist[j] = playlist[j], playlist[i]
     end
     if buf ~= nil and api.nvim_buf_is_valid(buf) then
-        M.open()
+        local r, c = unpack(api.nvim_win_get_cursor(0))
+        M.open(r, c)
     end
 end
 
@@ -73,10 +83,9 @@ local function play_music(path, volume_percent)
                 if code ~= 0 then
                     print(code)
                 end
-                M.open()
-                if is_quitting ~= 0 then
-                    play_music(playlist[playing_index], 100)
-                end
+                local r, c = unpack(api.nvim_win_get_cursor(0))
+                M.open(r, c)
+                play_music(playlist[playing_index], 100)
             end
         )
     )
@@ -91,12 +100,22 @@ function M.play()
     else
         play_music(playlist[playing_index], 100)
     end
+    is_playing = true
     is_stopped = false
 end
 
 function M.stop()
+    is_playing = false
     is_stopped = true
     io.popen("kill -s STOP " .. pid)
+end
+
+function M.toggle()
+    if is_playing then
+        M.stop()
+    else
+        M.play()
+    end
 end
 
 function M.skip()
@@ -122,7 +141,7 @@ local function get_float_config()
     return float_config
 end
 
-function M.open()
+function M.open(row, column)
     if buf ~= nil and api.nvim_buf_is_valid(buf) then
         api.nvim_buf_delete(buf, {})
     end
@@ -131,7 +150,41 @@ function M.open()
         function()
             api.nvim_buf_delete(buf, {})
         end,
-        { buffer = buf })
+        { buffer = buf }
+    )
+    vim.keymap.set('n', 'd',
+        function()
+            local r, c = unpack(api.nvim_win_get_cursor(0))
+            table.remove(playlist, r)
+            M.open(r, c)
+        end,
+        { buffer = buf }
+    )
+    vim.keymap.set('n', 'D',
+        function()
+            M.delete_all()
+        end,
+        { buffer = buf }
+    )
+    vim.keymap.set('n', 's',
+        function()
+            M.shuffle_playlist()
+        end,
+        { buffer = buf }
+    )
+    vim.keymap.set('n', ' ',
+        function()
+            M.toggle()
+        end,
+        { buffer = buf }
+    )
+    vim.keymap.set('n', '<CR>',
+        function()
+            M.skip()
+        end,
+        { buffer = buf }
+    )
+
     api.nvim_open_win(buf, true, get_float_config())
     local lines = {}
     for key, value in pairs(playlist) do
@@ -143,17 +196,20 @@ function M.open()
     end
     api.nvim_buf_clear_namespace(buf, -1, 0, #playlist)
     api.nvim_buf_set_lines(buf, 0, #playlist, false, lines)
+    if row ~= nil then
+        api.nvim_win_set_cursor(0, { row, column })
+    end
 end
 
--- vim.api.nvim_create_autocmd("VimLeavePre", {
---     pattern = "*",
---     callback = function()
---         if pid ~= nil then
---             is_quitting = 1
---             io.popen("kill " .. pid)
---         end
---     end
--- })
+vim.api.nvim_create_autocmd("VimLeave", {
+    pattern = "*",
+    callback = function()
+        if pid ~= nil then
+            io.popen("kill " .. pid)
+        end
+        print("exiting")
+    end
+})
 
 
 vim.api.nvim_create_user_command(
@@ -173,10 +229,17 @@ vim.api.nvim_create_user_command(
     end,
     {
         nargs = 1,
-        complete = function(ArgLead, CmdLine, CursorPos)
+        complete = function(_, _, _)
             return playlist
         end
     }
+)
+vim.api.nvim_create_user_command(
+    "NvimusicDeleteAll",
+    function()
+        M.delete_all()
+    end,
+    { nargs = 0 }
 )
 vim.api.nvim_create_user_command(
     "NvimusicShuffle",
@@ -200,6 +263,13 @@ vim.api.nvim_create_user_command(
     { nargs = 0 }
 )
 vim.api.nvim_create_user_command(
+    "NvimusicToggle",
+    function()
+        M.toggle()
+    end,
+    { nargs = 0 }
+)
+vim.api.nvim_create_user_command(
     "NvimusicSkip",
     function()
         M.skip()
@@ -209,7 +279,7 @@ vim.api.nvim_create_user_command(
 vim.api.nvim_create_user_command(
     "Nvimusic",
     function()
-        M.open()
+        M.open(nil, nil)
     end,
     { nargs = 0 }
 )
