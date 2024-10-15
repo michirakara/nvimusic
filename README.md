@@ -27,13 +27,13 @@
     - Play if stopped, stop if playing
 
 # Shortcut in TUI
-q: quit
-r: shuffle
-s: skip
-d: delete music from playlist at cursor
-D: clear the playlist
-Space: start/stop
-CR: play music at cursor
+- q: quit
+- r: shuffle
+- s: skip
+- d: delete music from playlist at cursor
+- D: clear the playlist
+- Space: start/stop
+- CR: play music at cursor
 
 # TODO
 - [ ] config
