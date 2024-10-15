@@ -6,6 +6,7 @@ local api = vim.api
 local playlist = {}
 local buf = 114514
 local is_playing = false
+local is_quitting = false
 
 local function dump_playlist()
     for key, value in pairs(playlist) do
@@ -16,11 +17,8 @@ end
 function M.add_to_playlist(path)
     local type = io.popen("file -b '" .. path .. "'"):read("*a")
     if type == "directory\n" then
-        for _, fname in pairs(vim.split(io.popen("find '" .. path .. "'"):read("*a"), "\n")) do
+        for _, fname in pairs(vim.split(io.popen("find '" .. path .. "' -type f"):read("*a"), "\n")) do
             if fname == "" then
-                goto continue
-            end
-            if io.popen("file -b '" .. fname .. "'"):read("*a") == "directory\n" then
                 goto continue
             end
 
@@ -76,9 +74,12 @@ local function play_music(path, volume_percent)
         },
         vim.schedule_wrap(
             function(code)
+                if is_quitting then
+                    return
+                end
                 playing_index = playing_index + 1
                 if playing_index > #playlist then
-                    playing_index = 0
+                    playing_index = 1
                 end
                 if code ~= 0 then
                     print(code)
@@ -94,6 +95,18 @@ local function play_music(path, volume_percent)
     if handle == nil then
         print("paplay is not installed")
     end
+end
+
+function M.play_index(idx)
+    if #playlist < idx then
+        print("index out of bound")
+        return
+    end
+    if not is_playing then
+        M.play()
+    end
+    playing_index = idx - 1
+    M.skip()
 end
 
 function M.play()
@@ -129,7 +142,11 @@ function M.toggle()
 end
 
 function M.skip()
-    io.popen("kill " .. pid)
+    if is_playing == false then
+        print("it is not playing")
+    else
+        io.popen("kill " .. pid)
+    end
 end
 
 local function get_float_config()
@@ -176,7 +193,7 @@ function M.open(row, column)
         end,
         { buffer = buf }
     )
-    vim.keymap.set('n', 's',
+    vim.keymap.set('n', 'r',
         function()
             M.shuffle_playlist()
         end,
@@ -188,9 +205,16 @@ function M.open(row, column)
         end,
         { buffer = buf }
     )
-    vim.keymap.set('n', '<CR>',
+    vim.keymap.set('n', 's',
         function()
             M.skip()
+        end,
+        { buffer = buf }
+    )
+    vim.keymap.set('n', '<CR>',
+        function()
+            local r, _ = unpack(api.nvim_win_get_cursor(0))
+            M.play_index(r)
         end,
         { buffer = buf }
     )
@@ -214,6 +238,7 @@ end
 vim.api.nvim_create_autocmd("VimLeave", {
     pattern = "*",
     callback = function()
+        is_quitting = true
         if pid ~= nil then
             io.popen("kill " .. pid)
         end
@@ -260,10 +285,14 @@ vim.api.nvim_create_user_command(
 )
 vim.api.nvim_create_user_command(
     "NvimusicPlay",
-    function()
-        M.play()
+    function(opts)
+        if #opts.fargs == 1 then
+            M.play_index(tonumber(opts.args))
+        else
+            M.play()
+        end
     end,
-    { nargs = 0 }
+    { nargs = "?" }
 )
 vim.api.nvim_create_user_command(
     "NvimusicStop",

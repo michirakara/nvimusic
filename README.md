@@ -8,7 +8,7 @@
 - Nvimusic
     - Show tui of playlist
 - NvimusicAdd
-    - Add a folder(does not search recursively) or file to the end of the playlist
+    - Add a folder or file to the end of the playlist
 - NvimusicShuffle
     - Shuffle the playlist
 - NvimusicPlay
