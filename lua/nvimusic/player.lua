@@ -83,8 +83,10 @@ local function play_music(path, volume_percent)
                 if code ~= 0 then
                     print(code)
                 end
-                local r, c = unpack(api.nvim_win_get_cursor(0))
-                M.open(r, c)
+                if buf ~= nil and api.nvim_buf_is_valid(buf) then
+                    local r, c = unpack(api.nvim_win_get_cursor(0))
+                    M.open(r, c)
+                end
                 play_music(playlist[playing_index], 100)
             end
         )
@@ -95,6 +97,10 @@ local function play_music(path, volume_percent)
 end
 
 function M.play()
+    if #playlist == 0 then
+        print("playlist is empty")
+        return
+    end
     if is_stopped then
         io.popen("kill -s CONT " .. pid)
     else
@@ -105,6 +111,10 @@ function M.play()
 end
 
 function M.stop()
+    if is_playing == false then
+        print("music is not playing")
+        return
+    end
     is_playing = false
     is_stopped = true
     io.popen("kill -s STOP " .. pid)
