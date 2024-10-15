@@ -20,6 +20,7 @@
     - Start at n-th element of playlist if an argument is specified
 - NvimusicStop
     - Stop playing
+    - Slow (because it's using SIGSTOP)
 - NvimusicSkip
     - Skip to the next music
 - NvimusicToggle
@@ -37,3 +38,4 @@ CR: play music at cursor
 # TODO
 - [ ] config
 - [ ] support more commands to play other than paplay
+- [ ] make NvimusicStop faster
