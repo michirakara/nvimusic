@@ -4,13 +4,13 @@ local uv = vim.uv
 local api = vim.api
 
 local start_time = 0
-local time_resumed = 0.0
+local time_resume = 0.0
 
 local used = false
 local playlist = {}
 local buf = 114514
 local is_playing = false
-local is_quitting = false
+local play_next = true
 local playing_now = ""
 
 local function dump_playlist()
@@ -70,19 +70,19 @@ end
 local playing_index = 1
 
 local handle, pid
-local is_stopped = false
 
-local function play_music(path)
+local function play_music(path, position)
     local tmp = vim.split(path, "/")
     playing_now = tmp[#tmp]
     start_time = os.time()
-    time_resumed = 0
+    time_resume = position
     handle, pid = uv.spawn("mpv", {
-            args = { "--no-video", path },
+            args = { "--no-video", path, "--start=" .. tostring(position) },
         },
         vim.schedule_wrap(
             function(code)
-                if is_quitting then
+                if not play_next then
+                    play_next=true
                     return
                 end
                 playing_index = playing_index + 1
@@ -96,7 +96,7 @@ local function play_music(path)
                     local r, c = unpack(api.nvim_win_get_cursor(0))
                     M.open(r, c)
                 end
-                play_music(playlist[playing_index])
+                play_music(playlist[playing_index], 0)
             end
         )
     )
@@ -118,19 +118,17 @@ function M.play_index(idx)
 end
 
 function M.play()
+    if is_playing then
+        print("music is playing")
+        return
+    end
     if #playlist == 0 then
         print("playlist is empty")
         return
     end
     used = true
-    if is_stopped then
-        start_time = os.time()
-        io.popen("kill -s CONT " .. pid)
-    else
-        play_music(playlist[playing_index])
-    end
+    play_music(playlist[playing_index], time_resume)
     is_playing = true
-    is_stopped = false
 end
 
 function M.stop()
@@ -139,9 +137,9 @@ function M.stop()
         return
     end
     is_playing = false
-    is_stopped = true
-    time_resumed = time_resumed + os.time() - start_time
-    io.popen("kill -s STOP " .. pid)
+    time_resume = time_resume + os.time() - start_time
+    play_next = false
+    io.popen("kill " .. pid)
 end
 
 function M.toggle()
@@ -234,6 +232,8 @@ function M.open(row, column)
     api.nvim_open_win(buf, true, get_float_config())
     local lines = {}
     for key, value in pairs(playlist) do
+        local tmp = vim.split(value, "/")
+        value = tmp[#tmp]:gsub("%.mp3", "")
         if key == playing_index then
             table.insert(lines, " " .. key .. "\t" .. value)
         else
@@ -249,7 +249,11 @@ end
 
 function M.get_time_seconds()
     if used then
-        return time_resumed + os.time() - start_time
+        if not is_playing then
+            return time_resume
+        else
+            return time_resume + os.time() - start_time
+        end
     else
         return ""
     end
@@ -266,7 +270,7 @@ end
 vim.api.nvim_create_autocmd("VimLeave", {
     pattern = "*",
     callback = function()
-        is_quitting = true
+        play_next = false
         if pid ~= nil then
             io.popen("kill " .. pid)
         end

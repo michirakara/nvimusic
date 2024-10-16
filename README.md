@@ -20,7 +20,6 @@
     - Start at n-th element of playlist if an argument is specified
 - NvimusicStop
     - Stop playing
-    - Slow (because it's using SIGSTOP)
 - NvimusicSkip
     - Skip to the next music
 - NvimusicToggle
@@ -37,8 +36,8 @@
 
 # TODO
 - [ ] config
-- [ ] support more commands to play other than paplay
-- [ ] make NvimusicStop faster
+- [ ] support more commands to play other than mpv
+- [x] make NvimusicStop faster
 
 # Connect to lualine.nvim
 Example lualine config
