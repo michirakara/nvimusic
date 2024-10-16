@@ -3,10 +3,15 @@ local M = {}
 local uv = vim.uv
 local api = vim.api
 
+local start_time = 0
+local time_resumed = 0.0
+
+local used = false
 local playlist = {}
 local buf = 114514
 local is_playing = false
 local is_quitting = false
+local playing_now = ""
 
 local function dump_playlist()
     for key, value in pairs(playlist) do
@@ -67,10 +72,13 @@ local playing_index = 1
 local handle, pid
 local is_stopped = false
 
-local function play_music(path, volume_percent)
-    local volume = math.floor(volume_percent / 100 * 65536)
-    handle, pid = uv.spawn("paplay", {
-            args = { "--volume=" .. tostring(volume), path },
+local function play_music(path)
+    local tmp = vim.split(path, "/")
+    playing_now = tmp[#tmp]
+    start_time = os.time()
+    time_resumed = 0
+    handle, pid = uv.spawn("mpv", {
+            args = { "--no-video", path },
         },
         vim.schedule_wrap(
             function(code)
@@ -88,12 +96,12 @@ local function play_music(path, volume_percent)
                     local r, c = unpack(api.nvim_win_get_cursor(0))
                     M.open(r, c)
                 end
-                play_music(playlist[playing_index], 100)
+                play_music(playlist[playing_index])
             end
         )
     )
     if handle == nil then
-        print("paplay is not installed")
+        print("mpv is not installed")
     end
 end
 
@@ -114,10 +122,12 @@ function M.play()
         print("playlist is empty")
         return
     end
+    used = true
     if is_stopped then
+        start_time = os.time()
         io.popen("kill -s CONT " .. pid)
     else
-        play_music(playlist[playing_index], 100)
+        play_music(playlist[playing_index])
     end
     is_playing = true
     is_stopped = false
@@ -130,6 +140,7 @@ function M.stop()
     end
     is_playing = false
     is_stopped = true
+    time_resumed = time_resumed + os.time() - start_time
     io.popen("kill -s STOP " .. pid)
 end
 
@@ -169,6 +180,7 @@ local function get_float_config()
 end
 
 function M.open(row, column)
+    print(M.get_now_playing())
     if buf ~= nil and api.nvim_buf_is_valid(buf) then
         api.nvim_buf_delete(buf, {})
     end
@@ -232,6 +244,22 @@ function M.open(row, column)
     api.nvim_buf_set_lines(buf, 0, #playlist, false, lines)
     if row ~= nil then
         api.nvim_win_set_cursor(0, { row, column })
+    end
+end
+
+function M.get_time_seconds()
+    if used then
+        return time_resumed + os.time() - start_time
+    else
+        return ""
+    end
+end
+
+function M.get_now_playing()
+    if used then
+        return playing_now
+    else
+        return ""
     end
 end
 
@@ -322,4 +350,4 @@ vim.api.nvim_create_user_command(
     end,
     { nargs = 0 }
 )
-return
+return M

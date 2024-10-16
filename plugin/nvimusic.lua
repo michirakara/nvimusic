@@ -3,4 +3,4 @@ if vim.g.loaded_nvimusic == 1 then
 end
 vim.g.loaded_nvimusic = 1
 
-require("nvimusic")
+return require("nvimusic")

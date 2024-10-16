@@ -1,3 +1,4 @@
-local M = {}
-require('nvimusic/player')
-return M
+-- local M = {}
+-- M.player = require('nvimusic.player')
+-- return M
+return require('nvimusic.player')
